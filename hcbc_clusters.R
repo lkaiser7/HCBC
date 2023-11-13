@@ -98,4 +98,88 @@ table(clust_2015$ZoneName, useNA = "ifany")
 # save file
 write_csv(clust_2015, paste0(hcbcDir, "2015_data/HCBC_2015_ClusteredData.csv"))
 
+### DATA MERGE ###
+# create combinded dataset for AGOL
+
+# 2019 subset
+agol_2019<-clust_2019[,c(20, 1:2, 5:6, 4, 7, 10:18)]
+head(agol_2019); names(agol_2019)
+# convert depth to meters
+agol_2019$Depth_ft_mn<-agol_2019$Depth_ft_mn/3.281
+names(agol_2019)[6]<-"Depth_m_mn"
+summary(agol_2019)
+
+# 2015 subset
+agol_2015<-cbind(rep(2015, dim(clust_2015)[1]), 
+                 clust_2015[,c(1, 39, 5:6, 4, 22, 26, 29, 27:28, 31, 34, 32:33, 35)])
+head(agol_2015); names(agol_2015)
+summary(agol_2015)
+names(agol_2015)<-names(agol_2019)
+
+# combine datasets
+agol_clust<-rbind(agol_2019, agol_2015)
+agol_clust[515:520,]
+summary(agol_clust)
+
+# add bins
+
+# depth
+summary(agol_clust$Depth_m_mn)
+agol_clust$depth_bin<-NA
+# Depth_bin (IN M!): Shallow = 6, Mid = 6-18, Deep > 18
+# loop through and fill gaps
+for(d in 1:dim(agol_clust)[1]){  # d = 1
+  # get observation depth in meters
+  depth_m<-agol_clust$Depth_m_mn[d]
+  
+  # fill with bin
+  if(depth_m < 6){
+    agol_clust$depth_bin[d]<-"Shallow"
+  }else if(depth_m >= 6 & depth_m <= 18){
+    agol_clust$depth_bin[d]<-"Mid"
+  }else if(depth_m > 18){
+    agol_clust$depth_bin[d]<-"Deep"
+  }else{
+    agol_clust$depth_bin[d]<-NA
+  }
+  # run next entry 
+}
+table(agol_clust$depth_bin, useNA = "ifany")
+
+# bleached coral
+summary(agol_clust$CoralBleached_Perc_mn)
+# %CoralBleached_Bin: 0 = 0%, 1 = 1-10%, 2 = 11-30%, 3 = 31-50%, 4 = 51-75%, 5 = 76-100%
+agol_clust$bleach_bin<-NA
+
+# loop through and fill gaps 
+for(d in 1:dim(agol_clust)[1]){  # d = 1
+  # get affected coral percentage of observation
+  pct_aff<-agol_clust$CoralBleached_Perc_mn[d]
+  # fill with bin
+  if(pct_aff == 0){
+    agol_clust$bleach_bin[d]<-0
+  }else if(pct_aff > 0 & pct_aff <= 10){
+    agol_clust$bleach_bin[d]<-1
+  }else if(pct_aff > 10 & pct_aff <= 30){
+    agol_clust$bleach_bin[d]<-2
+  }else if(pct_aff > 30 & pct_aff <= 50){
+    agol_clust$bleach_bin[d]<-3
+  }else if(pct_aff > 50 & pct_aff <= 75){
+    agol_clust$bleach_bin[d]<-4
+  }else if(pct_aff > 75){
+    agol_clust$bleach_bin[d]<-5
+  }else{
+    agol_clust$bleach_bin[d]<-NA
+  }
+  # run next entry 
+}
+table(agol_clust$bleach_bin, useNA = "ifany")
+
+# # add long zone names
+# table(agol_clust$ZoneName, useNA = "ifany")
+
+# save file
+head(data.frame(agol_clust))
+write_csv(agol_clust, paste0(hcbcDir, "HCBC_ClusteredData.csv"))
+
 ### END ###
